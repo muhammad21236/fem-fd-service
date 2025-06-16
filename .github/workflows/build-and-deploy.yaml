@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: make build-image
+
+      - run: make build-image-promote
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
