@@ -11,9 +11,12 @@ BUILD_IMAGE        := $(AWS_ECR_DOMAIN)/fem-fd-service
 BUILD_TAG          := $(if $(BUILD_TAG),$(BUILD_TAG),latest)
 PLATFORM           := linux/amd64
 
-# Check if GOOSE_DBSTRING is set (for safety)
+# Check if GOOSE_DBSTRING is set (for safety) unless only building images
+ifeq ($(filter-out build-image%,$(MAKECMDGOALS)),)
+else
 ifndef GOOSE_DBSTRING
 $(warning ⚠️  GOOSE_DBSTRING is not set — migration commands may fail!)
+endif
 endif
 
 DOCKERIZE_HOST     := $(shell echo $(GOOSE_DBSTRING) | cut -d "@" -f 2 | cut -d ":" -f 1)
@@ -58,21 +61,23 @@ build-image-push: build-image-login
 build-image-pull: build-image-login
 	docker image pull $(BUILD_IMAGE):$(GIT_SHA)
 
+# Image Promotion (with login first)
+build-image-promote: build-image-login
+	docker image tag $(BUILD_IMAGE):$(GIT_SHA) $(BUILD_IMAGE):$(BUILD_TAG)
+	docker image push $(BUILD_IMAGE):$(BUILD_TAG)
+
 
 # -------------------------------
 # Database Migrations via Dockerized Goose
 # -------------------------------
 
 build-image-migrate:
-	# Wait for DB to be ready
 	docker container run \
 		--entrypoint "dockerize" \
 		--network "host" \
 		--rm \
 		$(BUILD_IMAGE):$(GIT_SHA) \
 		-timeout 30s -wait $(DOCKERIZE_URL)
-
-	# Run migration status
 	docker container run \
 		--entrypoint "goose" \
 		--env "GOOSE_DBSTRING=$(GOOSE_DBSTRING)" \
@@ -81,8 +86,6 @@ build-image-migrate:
 		--rm \
 		$(BUILD_IMAGE):$(GIT_SHA) \
 		-dir $(MIGRATION_DIR) status
-
-	# Validate migration state
 	docker container run \
 		--entrypoint "goose" \
 		--env "GOOSE_DBSTRING=$(GOOSE_DBSTRING)" \
@@ -91,8 +94,6 @@ build-image-migrate:
 		--rm \
 		$(BUILD_IMAGE):$(GIT_SHA) \
 		-dir $(MIGRATION_DIR) validate
-
-	# Apply pending migrations
 	docker container run \
 		--entrypoint "goose" \
 		--env "GOOSE_DBSTRING=$(GOOSE_DBSTRING)" \
@@ -101,15 +102,6 @@ build-image-migrate:
 		--rm \
 		$(BUILD_IMAGE):$(GIT_SHA) \
 		-dir $(MIGRATION_DIR) up
-
-
-# -------------------------------
-# Image Promotion
-# -------------------------------
-
-build-image-promote:
-	docker image tag $(BUILD_IMAGE):$(GIT_SHA) $(BUILD_IMAGE):$(BUILD_TAG)
-	docker image push $(BUILD_IMAGE):$(BUILD_TAG)
 
 
 # -------------------------------
