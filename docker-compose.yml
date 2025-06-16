@@ -1,9 +1,13 @@
 services:
   postgres:
-    image: postgres:alpine
+    image: postgres:16-alpine
+    platform: linux/amd64
     environment:
-      POSTGRES_PASSWORD: password 
-    network_mode: host
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
 
