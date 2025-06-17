@@ -26,7 +26,7 @@ endif
 ifdef GOOSE_DBSTRING
 DOCKERIZE_HOST := $(word 2, $(subst @, ,$(GOOSE_DBSTRING)))
 else
-DOCKERIZE_HOST := postgresql://postgres.csjqnigawgqmmhwchejs:XVV5Uz!RjaP7Z6-@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+DOCKERIZE_HOST := localhost
 endif
 
 DOCKERIZE_URL := tcp://$(DOCKERIZE_HOST):5432
