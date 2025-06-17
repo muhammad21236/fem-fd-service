@@ -20,3 +20,25 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
         run: make build-image-promote
+  test:
+      needs:
+        - build
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          run: make build-image-pull
+
+        - run: make up
+
+        - env:
+            GOOSE_DBSTRING: postgresql://postgres:password@localhost:5432/postgres?sslmode=disable
+            GOOSE_DRIVER: postgres
+          run: make build-image-migrate
+
+        - if: always()
+          run: make down
