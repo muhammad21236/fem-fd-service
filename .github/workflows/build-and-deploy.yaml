@@ -15,17 +15,19 @@ jobs:
 
       - run: make build-image
 
-      - env:
+      - name: Push Docker images
+        env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
-        run: make build-image-promote
+        run: |
+          # Push both SHA-tagged image and latest
+          make build-image-push
+          make build-image-promote
 
-      # Save image tag (commit SHA) to a file
       - name: Save image tag
         run: echo "${{ github.sha }}" > image-tag.txt
 
-      # Upload image tag as artifact
       - uses: actions/upload-artifact@v4
         with:
           name: image-tag
@@ -38,31 +40,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Download image tag artifact
       - uses: actions/download-artifact@v4
         with:
           name: image-tag
 
-      # Load image tag into env var
       - name: Load image tag env
         run: echo "GIT_SHA=$(cat image-tag.txt)" >> $GITHUB_ENV
 
-      # AWS ECR login and pull built image using saved tag
-      - env:
+      - name: Pull Docker image
+        env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
         run: make build-image-pull
 
-      # Start services via docker compose
       - run: make up
 
-      # Run migrations using pulled image
-      - env:
+      - name: Run migrations
+        env:
           GOOSE_DBSTRING: postgresql://postgres:password@localhost:5432/postgres?sslmode=disable
           GOOSE_DRIVER: postgres
         run: make build-image-migrate
 
-      # Always bring down services even if something fails
       - if: always()
         run: make down
