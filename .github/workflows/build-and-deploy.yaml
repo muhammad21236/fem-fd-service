@@ -81,6 +81,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      DOCKERIZE_URL: ${{ secrets.PROD_GOOSE_DBSTRING }}
       GOOSE_DBSTRING: ${{ secrets.PROD_GOOSE_DBSTRING }}  # Production DB connection
       GOOSE_DRIVER: ${{ vars.PROD_GOOSE_DRIVER }}
     
