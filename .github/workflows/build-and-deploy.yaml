@@ -21,7 +21,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
         run: |
-          # Push both SHA-tagged image and latest
           make build-image-push
           make build-image-promote
 
@@ -32,8 +31,6 @@ jobs:
         with:
           name: image-tag
           path: image-tag.txt
-
-  # ... existing workflow ...
 
   test:
     needs: build
@@ -58,7 +55,6 @@ jobs:
 
       - run: make up
       
-      # Add database health check
       - name: Wait for database to be ready
         run: |
           docker run --network host --rm postgres:15-alpine \
@@ -72,3 +68,51 @@ jobs:
 
       - if: always()
         run: make down
+
+  deploy:
+    # Prevent concurrent deployments
+    concurrency:
+      cancel-in-progress: false
+      group: deploy-lock
+    
+    # Set environment variables for production
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GOOSE_DBSTRING: ${{ secrets.PROD_GOOSE_DBSTRING }}  # Production DB connection
+      GOOSE_DRIVER: ${{ vars.PROD_GOOSE_DRIVER }}
+    
+    # Only deploy from main branch
+    if: github.ref == 'refs/heads/main'
+    
+    # Wait for test job to complete successfully
+    needs:
+      - test
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Download saved image tag
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-tag
+      
+      # Load image tag into environment
+      - name: Load image tag
+        run: echo "GIT_SHA=$(cat image-tag.txt)" >> $GITHUB_ENV
+      
+      # Pull production-ready image from ECR
+      - name: Pull production image
+        run: make build-image-pull
+      
+      # Run migrations against production database
+      - name: Apply production migrations
+        run: make build-image-migrate
+      
+      # Promote image to 'latest' tag in production ECR
+      - name: Promote to production
+        run: make build-image-promote
