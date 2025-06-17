@@ -61,6 +61,10 @@ build-image-promote: build-image-login
 	docker image tag $(BUILD_IMAGE):$(GIT_SHA) $(BUILD_IMAGE):$(BUILD_TAG)
 	docker image push $(BUILD_IMAGE):$(BUILD_TAG)
 
+build-image-pull: build-image-login
+	docker image pull $(BUILD_IMAGE):$(GIT_SHA)
+
+
 # -------------------------------
 # Database Migrations via Dockerized Goose
 # -------------------------------
