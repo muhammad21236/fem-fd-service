@@ -77,7 +77,7 @@ build-image-migrate:
 
 # -------------------------------
 # Docker Compose Utilities
-# -------------------------------
+# ----------------------------
 
 down:
 	docker compose down --remove-orphans --volumes
