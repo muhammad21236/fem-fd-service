@@ -9,7 +9,8 @@ AWS_ECR_DOMAIN     := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_DEFAULT_REGION).amazonaws.
 PLATFORM           := linux/amd64
 
 # fallback GIT_SHA if git command fails
-GIT_SHA            := $(shell git rev-parse HEAD 2>NUL || echo "latest")
+GIT_SHA ?= $(shell git rev-parse HEAD 2>NUL || echo "latest")
+
 BUILD_IMAGE        := $(AWS_ECR_DOMAIN)/fem-fd-service
 BUILD_TAG          ?= latest
 
