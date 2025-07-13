@@ -1,3 +1,6 @@
+*.tfplan
+.terraform
+overrides.txt
 .go
 
 # IDE-specific files
